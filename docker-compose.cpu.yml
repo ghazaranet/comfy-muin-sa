@@ -1,0 +1,38 @@
+# ==============================================================================
+# Standalone CPU-Only Compose Configuration for ComfyUI
+# ==============================================================================
+# Use this configuration on systems without an NVIDIA GPU (e.g. Intel, AMD, or CPU-only):
+#
+#   docker compose -f docker-compose.cpu.yml up -d
+#
+# WARNING: Running image/video diffusion models on CPU is functional but
+# significantly slower than on dedicated NVIDIA CUDA GPUs.
+# ==============================================================================
+
+services:
+  comfyui:
+    image: comfyui:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TORCH_INDEX_URL: ${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cu124}
+    container_name: comfyui
+    restart: unless-stopped
+    ports:
+      - "${COMFYUI_PORT:-8188}:${COMFYUI_PORT:-8188}"
+    environment:
+      - COMFYUI_PORT=${COMFYUI_PORT:-8188}
+      - COMMANDLINE_ARGS=${COMMANDLINE_ARGS:---cpu}
+    volumes:
+      - ./models:/app/models
+      - ./custom_nodes:/app/custom_nodes
+      - ./input:/app/input
+      - ./output:/app/output
+      - ./user:/app/user
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:$${COMFYUI_PORT:-8188}/system_stats || curl -f http://127.0.0.1:$${COMFYUI_PORT:-8188}/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

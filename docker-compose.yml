@@ -1,0 +1,35 @@
+services:
+  comfyui:
+    image: comfyui:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TORCH_INDEX_URL: ${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cu124}
+    container_name: comfyui
+    restart: unless-stopped
+    ports:
+      - "${COMFYUI_PORT:-8188}:${COMFYUI_PORT:-8188}"
+    environment:
+      - COMFYUI_PORT=${COMFYUI_PORT:-8188}
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - COMMANDLINE_ARGS=${COMMANDLINE_ARGS:-}
+    volumes:
+      - ./models:/app/models
+      - ./custom_nodes:/app/custom_nodes
+      - ./input:/app/input
+      - ./output:/app/output
+      - ./user:/app/user
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:$${COMFYUI_PORT:-8188}/system_stats || curl -f http://127.0.0.1:$${COMFYUI_PORT:-8188}/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
